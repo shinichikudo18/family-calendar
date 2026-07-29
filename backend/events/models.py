@@ -6,16 +6,11 @@ from accounts.models import Family
 
 class Calendar(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    family = models.ForeignKey(
-        Family, on_delete=models.CASCADE, related_name='calendars'
-    )
+    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name='calendars')
     name = models.CharField(max_length=255)
     color = models.CharField(max_length=7, default='#3B82F6')
     description = models.TextField(blank=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, related_name='created_calendars'
-    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_calendars')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -30,9 +25,7 @@ class Calendar(models.Model):
 
 class Event(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    calendar = models.ForeignKey(
-        Calendar, on_delete=models.CASCADE, related_name='events'
-    )
+    calendar = models.ForeignKey(Calendar, on_delete=models.CASCADE, related_name='events')
     title = models.CharField(max_length=500)
     description = models.TextField(blank=True)
     start_time = models.DateTimeField()
@@ -43,10 +36,8 @@ class Event(models.Model):
     is_recurring = models.BooleanField(default=False)
     recurrence_rule = models.JSONField(null=True, blank=True)
     is_cancelled = models.BooleanField(default=False)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, related_name='created_events'
-    )
+    is_proposal = models.BooleanField(default=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_events')
     external_id = models.CharField(max_length=500, blank=True)
     external_provider = models.CharField(max_length=50, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -64,22 +55,32 @@ class Event(models.Model):
         return self.title
 
 
-class EventParticipant(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pendiente'),
-        ('accepted', 'Aceptado'),
-        ('maybe', 'Tal vez'),
-        ('declined', 'Rechazado'),
-    ]
-
+class EventProposal(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event = models.ForeignKey(
-        Event, on_delete=models.CASCADE, related_name='participants'
-    )
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        related_name='event_participations'
-    )
+    calendar = models.ForeignKey(Calendar, on_delete=models.CASCADE, related_name='proposals')
+    title = models.CharField(max_length=500)
+    description = models.TextField(blank=True)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    all_day = models.BooleanField(default=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    status = models.CharField(max_length=20, default='pending', choices=[
+        ('pending', 'Pending'), ('confirmed', 'Confirmed'), ('rejected', 'Rejected'),
+    ])
+    source_provider = models.CharField(max_length=50, default='n8n')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    confirmed_event = models.OneToOneField(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposal_source')
+
+    def __str__(self):
+        return f'Proposal: {self.title} ({self.status})'
+
+
+class EventParticipant(models.Model):
+    STATUS_CHOICES = [('pending', 'Pendiente'), ('accepted', 'Aceptado'), ('maybe', 'Tal vez'), ('declined', 'Rechazado')]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='participants')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='event_participations')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
 
     class Meta:
@@ -91,9 +92,7 @@ class EventParticipant(models.Model):
 
 class EventCategory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    family = models.ForeignKey(
-        Family, on_delete=models.CASCADE, related_name='event_categories'
-    )
+    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name='event_categories')
     name = models.CharField(max_length=100)
     color = models.CharField(max_length=7, default='#6B7280')
 
