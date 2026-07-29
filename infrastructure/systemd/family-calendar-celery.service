@@ -4,8 +4,8 @@ After=network.target redis-server.service
 Wants=redis-server.service
 
 [Service]
-User=www-data
-Group=www-data
+User=calendar
+Group=calendar
 WorkingDirectory=/opt/family-calendar/backend
 EnvironmentFile=/opt/family-calendar/.env
 ExecStart=/opt/family-calendar/.venv/bin/celery -A config worker     --loglevel=info     --concurrency=4

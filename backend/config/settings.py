@@ -132,6 +132,9 @@ SIMPLE_JWT = {
 
 # Redis & Celery
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+# n8n API key for automation endpoints
+N8N_API_KEY = os.environ.get("N8N_API_KEY", "")
+WEBHOOK_SIGNING_SECRET = os.environ.get("WEBHOOK_SIGNING_SECRET", "")
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_ACCEPT_CONTENT = ['json']
