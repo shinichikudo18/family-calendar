@@ -4,6 +4,7 @@ from django.contrib.auth import views as auth_views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import render, redirect
+from django.contrib.auth import logout as auth_logout
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, View
 from django.utils import timezone
@@ -19,7 +20,9 @@ class LoginView(auth_views.LoginView):
             return redirect('dashboard')
         return super().get(request, *args, **kwargs)
 
-logout_view = auth_views.LogoutView.as_view(next_page=reverse_lazy('login'))
+def logout_view(request):
+    auth_logout(request)
+    return redirect("login")
 
 class DashboardView(LoginRequiredMixin, View):
     def get(self, request):
@@ -118,3 +121,86 @@ class FamilyListView(LoginRequiredMixin, View):
             all_members = FamilyMember.objects.filter(family=m.family).select_related('user')
             families[m.family] = all_members
         return render(request, 'web/family.html', {'families': families})
+
+import requests
+from django.conf import settings
+from django.urls import reverse
+from sync.models import SyncProvider
+
+class SettingsView(LoginRequiredMixin, View):
+    def get(self, request):
+        providers = SyncProvider.objects.filter(user=request.user)
+        return render(request, 'web/settings.html', {'providers': providers})
+
+class GoogleAuthStartView(LoginRequiredMixin, View):
+    def get(self, request):
+        from urllib.parse import urlencode
+        params = {
+            'client_id': settings.GOOGLE_CLIENT_ID,
+            'redirect_uri': settings.GOOGLE_REDIRECT_URI,
+            'response_type': 'code',
+            'scope': 'https://www.googleapis.com/auth/calendar.readonly email',
+            'access_type': 'offline',
+            'prompt': 'consent',
+            'state': request.user.id,
+        }
+        url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urlencode(params)
+        return redirect(url)
+
+class GoogleAuthCallbackView(View):
+    def get(self, request):
+        code = request.GET.get('code')
+        error = request.GET.get('error')
+        if error or not code:
+            return redirect(reverse('settings') + '?error=' + (error or 'no_code'))
+
+        try:
+            resp = requests.post('https://oauth2.googleapis.com/token', data={
+                'client_id': settings.GOOGLE_CLIENT_ID,
+                'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                'redirect_uri': settings.GOOGLE_REDIRECT_URI,
+                'grant_type': 'authorization_code',
+                'code': code,
+            }, timeout=30)
+            data = resp.json()
+            if 'access_token' not in data:
+                return redirect(reverse('settings') + '?error=token_exchange_failed')
+
+            from django.contrib.auth import login
+            user_id = request.GET.get('state')
+            if user_id:
+                from django.contrib.auth.models import User
+                user = User.objects.filter(id=user_id).first()
+                if user and not request.user.is_authenticated:
+                    login(request, user)
+
+            user = request.user
+            if not user.is_authenticated:
+                return redirect(reverse('login'))
+
+            provider, created = SyncProvider.objects.get_or_create(
+                user=user,
+                provider_type='google',
+                defaults={
+                    'sync_mode': 'import',
+                    'is_enabled': True,
+                }
+            )
+            provider.credentials = {
+                'access_token': data.get('access_token'),
+                'refresh_token': data.get('refresh_token'),
+                'expires_in': data.get('expires_in', 3600),
+                'scope': data.get('scope', ''),
+            }
+            provider.provider_user = data.get('email', data.get('access_token', '')[:20])
+            provider.save()
+
+            return redirect(reverse('settings') + '?success=google_connected')
+
+        except Exception as e:
+            return redirect(reverse('settings') + '?error=' + str(e))
+
+class GoogleDisconnectView(LoginRequiredMixin, View):
+    def post(self, request):
+        SyncProvider.objects.filter(user=request.user, provider_type='google').delete()
+        return redirect(reverse('settings') + '?success=google_disconnected')

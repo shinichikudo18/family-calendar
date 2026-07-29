@@ -17,6 +17,7 @@ class SyncProvider(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name='sync_providers')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='sync_providers')
     provider_type = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
     sync_mode = models.CharField(max_length=13, choices=SYNC_MODE_CHOICES, default='import')
     provider_user = models.CharField(max_length=255, blank=True)
