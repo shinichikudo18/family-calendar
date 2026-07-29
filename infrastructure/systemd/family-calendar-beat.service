@@ -1,0 +1,18 @@
+[Unit]
+Description=Family Calendar Celery Beat
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/family-calendar/backend
+EnvironmentFile=/opt/family-calendar/.env
+ExecStart=/opt/family-calendar/.venv/bin/celery -A config beat     --loglevel=info     --scheduler django_celery_beat.schedulers:DatabaseScheduler
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

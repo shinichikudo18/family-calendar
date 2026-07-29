@@ -1,0 +1,45 @@
+# Core
+django>=5.1,<5.2
+djangorestframework>=3.15
+django-cors-headers>=4.6
+django-filter>=25.1
+
+# Database
+psycopg2-binary>=2.9
+
+# Cache & Queue
+redis>=5.2
+celery>=5.4
+django-celery-beat>=2.7
+
+# Server
+gunicorn>=23.0
+
+# Auth
+PyJWT>=2.10
+djangorestframework-simplejwt>=5.4
+
+# Utils
+python-dotenv>=1.1
+cryptography>=44.0
+requests>=2.32
+python-dateutil>=2.9
+pytz>=2024.2
+uuid>=1.30
+
+# LDAP (future)
+# django-auth-ldap>=5.1
+
+# Microsoft Calendar (future)
+# msal>=1.31
+
+# Google Calendar (future)
+# google-api-python-client>=2.155
+# google-auth-oauthlib>=1.2
+
+# Dev / Testing
+pytest>=8.3
+pytest-django>=4.10
+pytest-cov>=6.0
+model-bakery>=1.20
+ruff>=0.9

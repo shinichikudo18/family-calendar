@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r backend/requirements.txt
+      - name: Ruff check
+        run: ruff check backend/
+      - name: Ruff format check
+        run: ruff format --check backend/
+
+  django-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: family_calendar
+          POSTGRES_USER: calendar_user
+          POSTGRES_PASSWORD: ci_test_password
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r backend/requirements.txt
+      - name: Django check
+        run: |
+          cp .env.example .env
+          cd backend
+          python manage.py check
+        env:
+          DB_NAME: family_calendar
+          DB_USER: calendar_user
+          DB_PASSWORD: ci_test_password
+          DB_HOST: localhost
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
+          DJANGO_DEBUG: 'False'
+
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: family_calendar
+          POSTGRES_USER: calendar_user
+          POSTGRES_PASSWORD: ci_test_password
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r backend/requirements.txt
+      - name: Check pending migrations
+        run: |
+          cd backend
+          python manage.py makemigrations --check --dry-run
+        env:
+          DB_NAME: family_calendar
+          DB_USER: calendar_user
+          DB_PASSWORD: ci_test_password
+          DB_HOST: localhost
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
+          DJANGO_DEBUG: 'False'
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: family_calendar
+          POSTGRES_USER: calendar_user
+          POSTGRES_PASSWORD: ci_test_password
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r backend/requirements.txt
+      - name: Run pytest with coverage
+        run: |
+          cd backend
+          pytest --cov=. --cov-report=xml --cov-report=html
+        env:
+          DB_NAME: family_calendar
+          DB_USER: calendar_user
+          DB_PASSWORD: ci_test_password
+          DB_HOST: localhost
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
+          DJANGO_DEBUG: 'False'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/htmlcov/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check for secrets
+        run: |
+          pip install truffleHog
+          trufflehog --regex --entropy=False file://$(pwd) || true
+      - name: Dependency security check
+        run: |
+          pip install safety
+          pip freeze > /tmp/requirements-all.txt
+          safety check -r /tmp/requirements-all.txt || true
