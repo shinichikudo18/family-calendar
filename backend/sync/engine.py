@@ -30,9 +30,7 @@ class BaseSyncEngine(ABC):
     def import_events(self, calendar, since=None):
         from .models import SyncLog
         log = SyncLog.objects.create(provider=self.provider, status='running')
-        imported = 0
-        skipped = 0
-        failed = 0
+        imported = skipped = failed = 0
         try:
             external_events = self.fetch_events(since)
             for ext in external_events:
@@ -54,7 +52,7 @@ class BaseSyncEngine(ABC):
                 except Exception as e:
                     logger.warning(f'Failed to import event: {e}')
                     failed += 1
-            log.status = 'success'
+            log.status = 'success' if failed == 0 else 'partial'
         except Exception as e:
             log.status = 'failed'
             log.error_message = str(e)
@@ -64,3 +62,15 @@ class BaseSyncEngine(ABC):
         log.completed_at = timezone.now()
         log.save()
         return log
+
+    def export_event(self, event):
+        if self.provider.sync_mode == 'import':
+            raise NotImplementedError('Export not allowed in IMPORT_ONLY mode')
+        if event.external_id and event.external_provider == self.provider.provider_type:
+            return self.update_event(event)
+        result = self.push_event(event)
+        if result and result.get('id'):
+            event.external_id = f'{self.provider.provider_type}::{result["id"]}'
+            event.external_provider = self.provider.provider_type
+            event.save(update_fields=['external_id', 'external_provider'])
+        return result
