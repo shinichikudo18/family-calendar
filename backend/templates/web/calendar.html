@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load web_extras %}
+{% block title %}Calendario - Family Calendar{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-white">Calendario</h1>
+  </div>
+
+  <div class="bg-gray-900 rounded-2xl border border-gray-800 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <a href="?year={{ prev_year }}&month={{ prev_month }}"
+         class="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <h2 class="text-lg font-semibold text-white">{{ month_name }} {{ year }}</h2>
+      <a href="?year={{ next_year }}&month={{ next_month }}"
+         class="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="grid grid-cols-7 gap-px bg-gray-800 rounded-lg overflow-hidden">
+      {% for dayname in 'LUN|MAR|MIE|JUE|VIE|SAB|DOM'|split:'|' %}
+      <div class="bg-gray-900/50 px-3 py-2 text-xs font-medium text-gray-500 text-center">{{ dayname }}</div>
+      {% endfor %}
+
+      {% for week in month_days %}
+      {% for day, wday in week %}
+      <div class="bg-gray-900 min-h-[100px] p-2 {% if day == 0 %}opacity-30{% endif %}">
+        {% if day > 0 %}
+        <div class="text-sm font-medium mb-1
+          {% if day == today.day and month == today.month and year == today.year %}
+          bg-brand-600 text-white w-7 h-7 rounded-full flex items-center justify-center
+          {% else %}text-gray-300{% endif %}">
+          {{ day }}
+        </div>
+        <div class="space-y-1">
+          {% for event in events_by_day|get_item:day %}
+          <div class="text-xs px-1.5 py-0.5 rounded bg-brand-600/20 text-brand-300 truncate cursor-pointer hover:bg-brand-600/30 transition-colors"
+               title="{{ event.title }}">
+            {{ event.start_time|date:'H:i' }} {{ event.title }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

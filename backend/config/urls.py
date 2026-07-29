@@ -3,6 +3,7 @@ from django.urls import path, include
 from notifications import views as notification_views
 
 urlpatterns = [
+    path('', include('web.urls')),
     path('admin/', admin.site.urls),
     path('api/v1/auth/', include('accounts.urls')),
     path('api/v1/events/', include('events.urls')),

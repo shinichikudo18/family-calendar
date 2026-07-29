@@ -1,0 +1,12 @@
+{% for event in upcoming_events %}
+<div class="flex items-start gap-3 py-3 border-b border-gray-800 last:border-0">
+  <div class="w-1 h-full min-h-[2rem] rounded-full bg-brand-400/50 mt-1"></div>
+  <div class="flex-1 min-w-0">
+    <p class="text-sm font-medium text-white truncate">{{ event.title }}</p>
+    <p class="text-xs text-gray-400 mt-0.5">{{ event.start_time|date:'D j M' }} - {{ event.start_time|date:'H:i' }}</p>
+    {% if event.description %}<p class="text-xs text-gray-500 mt-1 truncate">{{ event.description }}</p>{% endif %}
+  </div>
+</div>
+{% empty %}
+<p class="text-sm text-gray-500 text-center py-8">No hay eventos proximos</p>
+{% endfor %}
