@@ -8,9 +8,9 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'jlxr$*!us+fb(r2qj*ab@=_s9=erxc
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.22.51').split(',')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.22.51,family.katherine.cl').split(',')
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,https://family.katherine.cl:88').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -182,7 +182,7 @@ LOGGING = {
 
 # LDAP Authentication
 import ldap
-from django_auth_ldap.config import LDAPSearch, PosixGroupType
+from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
 
 AUTH_LDAP_SERVER_URI = os.environ.get('LDAP_SERVER_URI', 'ldap://192.168.22.224:3890')
 AUTH_LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN', 'cn=katherine,ou=people,dc=katherine,dc=cl')
@@ -198,6 +198,16 @@ AUTH_LDAP_USER_ATTR_MAP = {
 }
 AUTH_LDAP_ALWAYS_UPDATE_USER = True
 AUTH_LDAP_CACHE_TIMEOUT = 3600
+
+AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+    'dc=katherine,dc=cl',
+    ldap.SCOPE_SUBTREE,
+    '(objectClass=groupOfNames)',
+)
+AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
+AUTH_LDAP_REQUIRE_GROUP = None
+AUTH_LDAP_FIND_GROUP_PERMS = False
+AUTH_LDAP_MIRROR_GROUPS = True
 
 AUTHENTICATION_BACKENDS = [
     'django_auth_ldap.backend.LDAPBackend',

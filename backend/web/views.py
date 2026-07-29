@@ -21,38 +21,33 @@ class LoginView(auth_views.LoginView):
 
 logout_view = auth_views.LogoutView.as_view(next_page=reverse_lazy('login'))
 
-class DashboardView(LoginRequiredMixin, TemplateView):
-    template_name = 'web/dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
+class DashboardView(LoginRequiredMixin, View):
+    def get(self, request):
         now = timezone.now()
-        calendars = FamilyCalendar.objects.filter(family__members__user=self.request.user)
-        ctx['calendars'] = calendars
-        if self.request.GET.get('partial') == 'today':
+        calendars = FamilyCalendar.objects.filter(family__members__user=request.user)
+        partial = request.GET.get('partial')
+
+        if partial == 'today':
             start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end = start + timedelta(days=1)
             events = Event.objects.filter(calendar__in=calendars, start_time__gte=start, start_time__lt=end, is_cancelled=False).order_by('start_time')
-            ctx['today_events'] = events
-            return render(self.request, 'web/partials/today_events.html', ctx)
-        if self.request.GET.get('partial') == 'upcoming':
+            return render(request, 'web/partials/today_events.html', {'today_events': events})
+
+        if partial == 'upcoming':
             events = Event.objects.filter(calendar__in=calendars, start_time__gte=now, is_cancelled=False).exclude(start_time__date=now.date()).order_by('start_time')[:10]
-            ctx['upcoming_events'] = events
-            return render(self.request, 'web/partials/upcoming_events.html', ctx)
-        return ctx
+            return render(request, 'web/partials/upcoming_events.html', {'upcoming_events': events})
 
-class MonthCalendarView(LoginRequiredMixin, TemplateView):
-    template_name = 'web/calendar.html'
+        return render(request, 'web/dashboard.html', {'calendars': calendars})
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        year = int(self.request.GET.get('year', timezone.now().year))
-        month = int(self.request.GET.get('month', timezone.now().month))
+class MonthCalendarView(LoginRequiredMixin, View):
+    def get(self, request):
+        year = int(request.GET.get('year', timezone.now().year))
+        month = int(request.GET.get('month', timezone.now().month))
 
         cal = calendar.Calendar()
         month_days = cal.monthdays2calendar(year, month)
 
-        calendars = FamilyCalendar.objects.filter(family__members__user=self.request.user)
+        calendars = FamilyCalendar.objects.filter(family__members__user=request.user)
         month_start = date(year, month, 1)
         if month == 12:
             month_end = date(year + 1, 1, 1)
@@ -71,7 +66,7 @@ class MonthCalendarView(LoginRequiredMixin, TemplateView):
             d = e.start_time.astimezone(timezone.get_current_timezone()).day
             events_by_day.setdefault(d, []).append(e)
 
-        ctx.update({
+        ctx = {
             'year': year,
             'month': month,
             'month_name': calendar.month_name[month],
@@ -82,8 +77,8 @@ class MonthCalendarView(LoginRequiredMixin, TemplateView):
             'next_month': month + 1 if month < 12 else 1,
             'next_year': year if month < 12 else year + 1,
             'today': timezone.now().astimezone(timezone.get_current_timezone()).date(),
-        })
-        return ctx
+        }
+        return render(request, 'web/calendar.html', ctx)
 
 class EventCreateHtmxView(LoginRequiredMixin, View):
     def post(self, request):
@@ -113,3 +108,13 @@ class EventCreateHtmxView(LoginRequiredMixin, View):
             return HttpResponse(status=201)
         except Exception as e:
             return HttpResponse(f'Error: {e}', status=400)
+
+class FamilyListView(LoginRequiredMixin, View):
+    def get(self, request):
+        from accounts.models import Family, FamilyMember
+        memberships = FamilyMember.objects.filter(user=request.user).select_related('family', 'user')
+        families = {}
+        for m in memberships:
+            all_members = FamilyMember.objects.filter(family=m.family).select_related('user')
+            families[m.family] = all_members
+        return render(request, 'web/family.html', {'families': families})

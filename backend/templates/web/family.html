@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Mi Familia - Family Calendar{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold text-white mb-6">Mi Familia</h1>
+
+  {% for family, members in families.items %}
+  <div class="bg-gray-900 rounded-2xl border border-gray-800 p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-white">{{ family.name }}</h2>
+      <span class="text-xs text-gray-500">{{ members|length }} miembros</span>
+    </div>
+    <p class="text-sm text-gray-400 mb-4">{{ family.description|default:'' }}</p>
+
+    <div class="space-y-3">
+      {% for member in members %}
+      <div class="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
+        <div class="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center text-sm font-bold text-white">
+          {{ member.user.first_name|first|default:member.user.username|first|upper }}
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-white">{{ member.user.get_full_name|default:member.user.username }}</p>
+          <p class="text-xs text-gray-500">{{ member.user.email }}</p>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full
+          {% if member.role == 'admin' %}bg-brand-600/20 text-brand-300
+          {% else %}bg-gray-700/50 text-gray-400{% endif %}">
+          {{ member.get_role_display }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="bg-gray-900 rounded-2xl border border-gray-800 p-12 text-center">
+    <p class="text-gray-500">No perteneces a ninguna familia aun.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
