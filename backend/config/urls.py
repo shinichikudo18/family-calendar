@@ -5,6 +5,7 @@ from notifications import views as notification_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/auth/', include('accounts.urls')),
+    path('api/v1/events/', include('events.urls')),
     path('api/v1/notifications/', include('notifications.urls')),
     path('api/v1/automation/today/', notification_views.automation_today, name='automation-today'),
     path('api/v1/automation/upcoming/', notification_views.automation_upcoming, name='automation-upcoming'),

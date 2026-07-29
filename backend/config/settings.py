@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     # Local
     'notifications',
     'accounts',
+    'events',
 ]
 
 MIDDLEWARE = [
