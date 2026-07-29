@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'notifications',
     'accounts',
     'events',
+    'sync',
 ]
 
 MIDDLEWARE = [
